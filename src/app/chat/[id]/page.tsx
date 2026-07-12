@@ -19,7 +19,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
 
   const [chat, initialMoodData, historyItems] = await Promise.all([
     getChatForUser(id, userId),
-    getMoodDataForCurrentUser(),
+    getMoodDataForCurrentUser().catch(() => []),
     getChatsForUser(userId),
   ]);
 

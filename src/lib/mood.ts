@@ -60,7 +60,12 @@ export async function getMoodDataForCurrentUser(): Promise<MoodDataPoint[]> {
     return [];
   }
 
-  const user = await getOrCreateUser(userId);
-  const logs = await getMoodLogsForUser(user.id);
-  return formatMoodLogsForGraph(logs);
+  try {
+    const user = await getOrCreateUser(userId);
+    const logs = await getMoodLogsForUser(user.id);
+    return formatMoodLogsForGraph(logs);
+  } catch (error) {
+    console.error('--- MOOD DATA ERROR ---', error);
+    return [];
+  }
 }
