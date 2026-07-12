@@ -34,6 +34,8 @@ export async function GET() {
   }
 
   try {
+    let hasModeMismatch = false;
+
     const plans = await Promise.all(
       PLAN_IDS.map(async (planId) => {
         const priceId = getPriceIdForPlan(planId);
@@ -69,6 +71,18 @@ export async function GET() {
           };
         } catch (priceError) {
           console.error(`--- STRIPE PRICE ERROR (${planId}) ---`, priceError);
+
+          const stripeMessage =
+            priceError instanceof Error ? priceError.message : String(priceError);
+          const modeMismatch =
+            stripeMessage.includes('No such price') ||
+            stripeMessage.includes('a similar object exists in test mode') ||
+            stripeMessage.includes('a similar object exists in live mode');
+
+          if (modeMismatch) {
+            hasModeMismatch = true;
+          }
+
           return {
             id: planId,
             ...label,
@@ -82,10 +96,23 @@ export async function GET() {
       }),
     );
 
+    const stripeKey = process.env.STRIPE_SECRET_KEY ?? '';
+    const stripeMode = stripeKey.startsWith('sk_live_')
+      ? 'live'
+      : stripeKey.startsWith('sk_test_')
+        ? 'test'
+        : 'unknown';
+
     return NextResponse.json({
       plans,
       configured: getMissingStripeEnvVars().length === 0 && plans.some((p) => p.available),
       missingEnvVars: getMissingStripeEnvVars(),
+      stripeMode,
+      hint: hasModeMismatch
+        ? stripeMode === 'live'
+          ? 'Your price IDs are from Stripe Test mode. Switch Stripe to Live, create live prices, and use those IDs — or use sk_test_ for testing.'
+          : 'Your price IDs are from Stripe Live mode but your secret key is test. Use matching test price IDs or switch to sk_live_.'
+        : undefined,
     });
   } catch (error) {
     console.error('--- STRIPE PLANS ERROR ---', error);
