@@ -3,14 +3,14 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
+import type { ChatTransport, UIMessage } from 'ai';
 import { PricingPlans } from '@/components/PricingPlans';
 import { saveReflection } from '@/app/actions/chat';
 import { ChatBox } from '@/components/ChatBox';
 import { ChatLayout } from '@/components/ChatLayout';
 import { ReflectionPage } from '@/components/ReflectionPage';
-import type { ChatHistoryItem } from '@/lib/chats';
-import { type MoodDataPoint } from '@/lib/mood';
+import type { ChatHistoryItem } from '@/lib/types/chats';
+import { type MoodDataPoint } from '@/lib/types/mood';
 import { generateId } from '@/lib/generate-id';
 import { UI } from '@/lib/labels';
 
@@ -83,9 +83,17 @@ export function JournalApp({
     }
   }, [searchParams]);
 
-  const { messages, sendMessage, setMessages } = useChat({
-    transport: useMemo(
-      () =>
+  const [chatTransport, setChatTransport] =
+    useState<ChatTransport<UIMessage> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTransport() {
+      const { DefaultChatTransport } = await import('ai');
+      if (cancelled) return;
+
+      setChatTransport(
         new DefaultChatTransport({
           body: { personaId: activePersona, isPrivate, chatId },
           fetch: async (input, init) => {
@@ -121,8 +129,18 @@ export function JournalApp({
             return res;
           },
         }),
-      [activePersona, isPrivate, chatId],
-    ),
+      );
+    }
+
+    loadTransport();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePersona, isPrivate, chatId]);
+
+  const { messages, sendMessage, setMessages } = useChat({
+    transport: chatTransport ?? undefined,
     onError: (error) => {
       if (error.message === RATE_LIMIT_MESSAGE) {
         setSystemNotice(RATE_LIMIT_MESSAGE);

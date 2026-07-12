@@ -1,4 +1,8 @@
-export type PlanId = 'weekly' | 'monthly' | 'lifetime';
+import 'server-only';
+
+import type { PlanId } from '@/lib/types/plans';
+
+export type { PlanId } from '@/lib/types/plans';
 
 export const PLAN_IDS: PlanId[] = ['weekly', 'monthly', 'lifetime'];
 

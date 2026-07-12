@@ -9,7 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 
-import type { MoodDataPoint } from '@/lib/mood';
+import type { MoodDataPoint } from '@/lib/types/mood';
 
 export type { MoodDataPoint };
 

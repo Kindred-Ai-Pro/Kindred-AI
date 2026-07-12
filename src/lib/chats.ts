@@ -1,10 +1,9 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import 'server-only';
 
-export type ChatHistoryItem = {
-  id: string;
-  label: string;
-  content?: string;
-};
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import type { ChatHistoryItem } from '@/lib/types/chats';
+
+export type { ChatHistoryItem } from '@/lib/types/chats';
 
 type ChatListRow = {
   id: string;

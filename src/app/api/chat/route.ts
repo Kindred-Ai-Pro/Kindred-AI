@@ -1,11 +1,8 @@
 export const dynamic = 'force-dynamic';
 
-import { google } from '@ai-sdk/google';
+import type { UIMessage } from 'ai';
 import { auth } from '@clerk/nextjs/server';
-import { Index } from '@upstash/vector';
-import { convertToModelMessages, streamText, UIMessage } from 'ai';
 import { NextResponse } from 'next/server';
-import Sentiment from 'sentiment';
 import { db } from '@/lib/db';
 import { generateId } from '@/lib/generate-id';
 import {
@@ -23,15 +20,6 @@ const LIMIT_REACHED_MESSAGE =
   "You've reached your limit of 5 free chats today. Please check back in 24 hours or subscribe for unlimited access.";
 
 const rateLimitStore = new Map<string, number[]>();
-const sentiment = new Sentiment();
-
-const index =
-  process.env.UPSTASH_VECTOR_REST_URL && process.env.UPSTASH_VECTOR_REST_TOKEN
-    ? new Index({
-        url: process.env.UPSTASH_VECTOR_REST_URL,
-        token: process.env.UPSTASH_VECTOR_REST_TOKEN,
-      })
-    : null;
 
 function getClientIp(req: Request): string {
   const forwarded = req.headers.get('x-forwarded-for');
@@ -114,6 +102,21 @@ const systemPrompts = {
   - Constraint: If the user describes severe physical withdrawal or immediate crisis, gently urge them to seek medical or professional help.`
 };
 
+async function getVectorIndex() {
+  if (
+    !process.env.UPSTASH_VECTOR_REST_URL ||
+    !process.env.UPSTASH_VECTOR_REST_TOKEN
+  ) {
+    return null;
+  }
+
+  const { Index } = await import('@upstash/vector');
+  return new Index({
+    url: process.env.UPSTASH_VECTOR_REST_URL,
+    token: process.env.UPSTASH_VECTOR_REST_TOKEN,
+  });
+}
+
 export async function POST(req: Request) {
   const ip = getClientIp(req);
 
@@ -122,6 +125,16 @@ export async function POST(req: Request) {
   }
 
   try {
+    const [{ google }, { convertToModelMessages, streamText }, { default: Sentiment }] =
+      await Promise.all([
+        import('@ai-sdk/google'),
+        import('ai'),
+        import('sentiment'),
+      ]);
+
+    const sentiment = new Sentiment();
+    const index = await getVectorIndex();
+
     const { userId } = await auth();
 
     if (!userId) {

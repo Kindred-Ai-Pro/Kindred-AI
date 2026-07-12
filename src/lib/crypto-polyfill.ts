@@ -18,3 +18,7 @@ if (typeof globalThis !== 'undefined') {
     globalThis.crypto = cryptoObj;
   }
 }
+
+export function applyCryptoPolyfill() {
+  // Side effects run at module load; export enables dynamic import().
+}

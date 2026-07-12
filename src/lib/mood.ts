@@ -1,12 +1,11 @@
+import 'server-only';
+
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { getOrCreateUser } from '@/lib/user';
+import type { MoodDataPoint } from '@/lib/types/mood';
 
-export type MoodDataPoint = {
-  date: string;
-  moodValue: number;
-  moodLabel: string;
-};
+export type { MoodDataPoint } from '@/lib/types/mood';
 
 export function sentimentToMood(score: number): {
   moodLabel: string;

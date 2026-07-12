@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { PlanId } from '@/lib/plans';
+import type { PlanId } from '@/lib/types/plans';
 
 type Plan = {
   id: PlanId;

@@ -1,8 +1,12 @@
 'use client';
 
-import '@/lib/crypto-polyfill';
+import { useEffect } from 'react';
 
-/** Loads crypto polyfill before interactive client components mount. */
+/** Loads crypto polyfill only in the browser at runtime. */
 export function CryptoPolyfill() {
+  useEffect(() => {
+    void import('@/lib/crypto-polyfill');
+  }, []);
+
   return null;
 }

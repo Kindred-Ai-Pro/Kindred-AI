@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ChatSearch } from '@/components/ChatSearch';
 import { MoodGraph } from '@/components/MoodGraph';
 import { Sidebar } from '@/components/Sidebar';
-import type { ChatHistoryItem } from '@/lib/chats';
+import type { ChatHistoryItem } from '@/lib/types/chats';
 import { UI } from '@/lib/labels';
-import type { MoodDataPoint } from '@/lib/mood';
+import type { MoodDataPoint } from '@/lib/types/mood';
 
 type ChatLayoutProps = {
   children: ReactNode;

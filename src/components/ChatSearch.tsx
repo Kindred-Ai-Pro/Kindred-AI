@@ -1,7 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Document } from 'flexsearch';
+import { useEffect, useMemo, useState } from 'react';
 import { Lock } from 'lucide-react';
 
 export type ChatSearchItem = {
@@ -15,11 +14,20 @@ type ChatSearchProps = {
   onSelect?: (id: string) => void;
 };
 
-function buildSearchIndex(chats: ChatSearchItem[]) {
+type FlexSearchDocument = {
+  add: (doc: Record<string, string>) => void;
+  search: (
+    query: string,
+    options?: { enrich?: boolean },
+  ) => Array<{ result?: Array<{ id?: string } | string> }>;
+};
+
+async function buildSearchIndex(chats: ChatSearchItem[]) {
+  const { Document } = await import('flexsearch');
   const index = new Document({
     document: { id: 'id', index: ['title', 'content'] },
     tokenize: 'forward',
-  });
+  }) as FlexSearchDocument;
 
   for (const chat of chats) {
     index.add({
@@ -34,11 +42,11 @@ function buildSearchIndex(chats: ChatSearchItem[]) {
 
 function searchChats(
   chats: ChatSearchItem[],
-  index: ReturnType<typeof buildSearchIndex>,
+  index: FlexSearchDocument | null,
   query: string,
 ) {
   const trimmed = query.trim();
-  if (!trimmed) {
+  if (!trimmed || !index) {
     return chats;
   }
 
@@ -61,8 +69,21 @@ function searchChats(
 
 export function ChatSearch({ chats, onSelect }: ChatSearchProps) {
   const [query, setQuery] = useState('');
+  const [index, setIndex] = useState<FlexSearchDocument | null>(null);
 
-  const index = useMemo(() => buildSearchIndex(chats), [chats]);
+  useEffect(() => {
+    let cancelled = false;
+
+    buildSearchIndex(chats).then((builtIndex) => {
+      if (!cancelled) {
+        setIndex(builtIndex);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chats]);
 
   const filteredChats = useMemo(
     () => searchChats(chats, index, query),
