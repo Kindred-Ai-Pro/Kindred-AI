@@ -101,9 +101,23 @@ export function PricingPlans({
         } else if (data.error && typeof data.error === 'string') {
           setPlansError(data.error);
         } else if (!loadedPlans.some((plan) => plan.available)) {
-          setPlansError(
-            'Stripe could not load prices. Use live price IDs (price_...) with a live secret key (sk_live_...), then redeploy.',
-          );
+          const priceErrors = data.priceErrors as
+            | Record<string, { priceId?: string; message?: string }>
+            | undefined;
+          const firstDetail = priceErrors
+            ? Object.entries(priceErrors)[0]
+            : undefined;
+
+          if (firstDetail) {
+            const [planId, detail] = firstDetail;
+            setPlansError(
+              `${planId}: ${detail.message ?? 'Unknown Stripe error'} (price ID ${detail.priceId ?? 'unknown'}). Update Vercel env vars and redeploy.`,
+            );
+          } else {
+            setPlansError(
+              'Stripe could not load prices. Open /api/stripe/plans in your browser to see diagnostics, then redeploy.',
+            );
+          }
         }
       })
       .catch((error) => {

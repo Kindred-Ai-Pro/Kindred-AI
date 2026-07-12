@@ -1,12 +1,13 @@
 import 'server-only';
 
 import Stripe from 'stripe';
+import { readStripeEnv } from '@/lib/stripe-env';
 
 let stripeClient: Stripe | undefined;
 
 export function getStripe(): Stripe {
   if (!stripeClient) {
-    const key = process.env.STRIPE_SECRET_KEY;
+    const key = readStripeEnv('STRIPE_SECRET_KEY');
     if (!key) {
       throw new Error('STRIPE_SECRET_KEY is not set');
     }

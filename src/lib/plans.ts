@@ -7,6 +7,7 @@ import {
   type PlanSummary,
 } from '@/lib/plan-catalog';
 import type { PlanId } from '@/lib/types/plans';
+import { readStripeEnv } from '@/lib/stripe-env';
 
 export type { PlanId } from '@/lib/types/plans';
 export { PLAN_IDS, PLAN_LABELS, createUnavailablePlans, type PlanSummary };
@@ -30,7 +31,7 @@ export function getPriceIdForPlan(plan: PlanId): string | undefined {
   const keys = [PLAN_ENV_KEYS[plan], ...(PLAN_ENV_FALLBACKS[plan] ?? [])];
 
   for (const key of keys) {
-    const priceId = process.env[key];
+    const priceId = readStripeEnv(key);
     if (priceId && priceId !== 'price_') {
       return priceId;
     }
@@ -42,7 +43,7 @@ export function getPriceIdForPlan(plan: PlanId): string | undefined {
 export function getMissingStripeEnvVars(): string[] {
   const missing: string[] = [];
 
-  if (!process.env.STRIPE_SECRET_KEY) {
+  if (!readStripeEnv('STRIPE_SECRET_KEY')) {
     missing.push('STRIPE_SECRET_KEY');
   }
 
