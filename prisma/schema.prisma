@@ -8,13 +8,27 @@ datasource db {
 }
 
 model User {
-  id               String   @id @default(cuid())
-  clerkId          String   @unique
-  email            String   @unique
-  stripeCustomerId String?  @unique
-  isSubscribed     Boolean  @default(false)
-  chatCount        Int      @default(0)
-  lastChatDate     DateTime @default(now())
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id               String    @id @default(cuid())
+  clerkId          String    @unique
+  email            String    @unique
+  stripeCustomerId String?   @unique
+  isSubscribed     Boolean   @default(false)
+  chatCount        Int       @default(0)
+  lastChatDate     DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  moodLogs         MoodLog[]
+}
+
+model MoodLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moodLabel String
+  moodValue Int
+  createdAt DateTime @default(now())
+  chatId    String
+
+  @@index([userId, createdAt])
+  @@index([chatId])
 }

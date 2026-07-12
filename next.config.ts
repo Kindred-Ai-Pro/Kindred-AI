@@ -1,12 +1,23 @@
 import type { NextConfig } from "next";
 
-// Absolute prefix so Capacitor WebViews resolve /_next assets correctly.
-// Override with NEXT_PUBLIC_ASSET_PREFIX for CDN or a different host.
+// Only set when testing Capacitor on a physical device, e.g.:
+// NEXT_PUBLIC_ASSET_PREFIX=http://192.168.1.14:3000
+// Never apply asset prefix in production — prevents broken CSS on the public site.
 const assetPrefix =
-  process.env.NEXT_PUBLIC_ASSET_PREFIX ?? "http://192.168.1.14:3000";
+  process.env.NODE_ENV === "production"
+    ? undefined
+    : process.env.NEXT_PUBLIC_ASSET_PREFIX;
 
 const nextConfig: NextConfig = {
-  assetPrefix,
+  ...(assetPrefix ? { assetPrefix } : {}),
+  // Capacitor WebView loads from these origins in dev — required for JS/HMR.
+  allowedDevOrigins: [
+    "127.0.0.1",
+    "localhost",
+    "192.168.1.126",
+    "capacitor://localhost",
+    "ionic://localhost",
+  ],
 };
 
 export default nextConfig;

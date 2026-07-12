@@ -5,11 +5,13 @@ import { convertToModelMessages, streamText, UIMessage } from 'ai';
 import { NextResponse } from 'next/server';
 import Sentiment from 'sentiment';
 import { db } from '@/lib/db';
+import { generateId } from '@/lib/generate-id';
 import {
   FREE_DAILY_CHAT_LIMIT,
   getEffectiveChatCount,
   getOrCreateUser,
 } from '@/lib/user';
+import { sentimentToMood } from '@/lib/mood';
 
 const RATE_LIMIT = 10;
 const WINDOW_MS = 60 * 60 * 1000;
@@ -62,6 +64,17 @@ function getLatestUserInput(messages: UIMessage[]): string {
   }
 
   return '';
+}
+
+function getLatestUserMessageId(messages: UIMessage[]): string | undefined {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (message.role === 'user' && message.id) {
+      return message.id;
+    }
+  }
+
+  return undefined;
 }
 
 const systemPrompts = {
@@ -132,7 +145,7 @@ export async function POST(req: Request) {
       },
     });
 
-    const { messages, personaId, isPrivate } = await req.json();
+    const { messages, personaId, isPrivate, chatId: sessionChatId } = await req.json();
     const userInput = getLatestUserInput(messages);
     const selectedPrompt =
       systemPrompts[personaId as keyof typeof systemPrompts] || systemPrompts.mentor;
@@ -140,6 +153,20 @@ export async function POST(req: Request) {
     const analysis = sentiment.analyze(userInput);
     const sentimentLabel =
       analysis.score > 0 ? 'positive' : analysis.score < 0 ? 'negative' : 'neutral';
+    const { moodLabel, moodValue } = sentimentToMood(analysis.score);
+    const chatId =
+      sessionChatId ?? getLatestUserMessageId(messages) ?? generateId();
+
+    if (userInput.trim()) {
+      await db.moodLog.create({
+        data: {
+          userId: user.id,
+          moodLabel,
+          moodValue,
+          chatId,
+        },
+      });
+    }
 
     let context = '';
     if (!isPrivate && index && userInput) {

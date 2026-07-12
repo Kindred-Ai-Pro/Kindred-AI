@@ -1,0 +1,52 @@
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
+export type ChatHistoryItem = {
+  id: string;
+  label: string;
+  content?: string;
+};
+
+type ChatListRow = {
+  id: string;
+  title: string;
+};
+
+export async function getChatsForUser(
+  clerkUserId: string,
+): Promise<ChatHistoryItem[]> {
+  const supabase = createServerSupabaseClient();
+
+  const { data, error } = await supabase
+    .from('chats')
+    .select('id, title')
+    .eq('user_id', clerkUserId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching chats:', error);
+    return [];
+  }
+
+  return (data as ChatListRow[]).map((chat) => ({
+    id: chat.id,
+    label: chat.title,
+  }));
+}
+
+export async function getChatForUser(chatId: string, clerkUserId: string) {
+  const supabase = createServerSupabaseClient();
+
+  const { data, error } = await supabase
+    .from('chats')
+    .select('id, title, content, user_id')
+    .eq('id', chatId)
+    .eq('user_id', clerkUserId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching chat:', error);
+    return null;
+  }
+
+  return data;
+}

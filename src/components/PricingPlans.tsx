@@ -89,7 +89,7 @@ export function PricingPlans({
   if (isLoading) {
     return (
       <div className={compact ? 'py-2' : 'py-8'}>
-        <p className="text-center text-sm text-stone-400">Loading plans...</p>
+        <p className="text-center text-sm text-zinc-500">Loading plans...</p>
       </div>
     );
   }
@@ -98,20 +98,20 @@ export function PricingPlans({
     <div className={compact ? '' : 'py-4'}>
       {!compact && (
         <div className="mb-8 text-center">
-          <h2 className="font-serif text-2xl text-stone-800">Choose your plan</h2>
-          <p className="mt-2 text-sm text-stone-500">
+          <h2 className="font-serif text-2xl text-slate-50">Choose your plan</h2>
+          <p className="mt-2 text-sm text-zinc-400">
             Start with a 3-day trial on weekly or monthly. Lifetime is a one-time purchase.
           </p>
         </div>
       )}
-      <label className="mb-6 flex cursor-pointer items-start gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3">
+      <label className="mb-6 flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3">
         <input
           type="checkbox"
           checked={acceptedTrial}
           onChange={(e) => setAcceptedTrial(e.target.checked)}
-          className="mt-0.5 h-4 w-4 rounded border-stone-300 text-stone-800 focus:ring-stone-500"
+          className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-950 text-slate-100 focus:ring-zinc-500"
         />
-        <span className="text-sm leading-relaxed text-stone-600">
+        <span className="text-sm leading-relaxed text-zinc-300">
           I agree to the 3-day trial and the subscription terms.
         </span>
       </label>
@@ -127,24 +127,24 @@ export function PricingPlans({
             key={plan.id}
             className={`relative flex flex-col rounded-2xl border-2 p-5 transition-shadow ${
               plan.highlight
-                ? 'border-stone-800 bg-white shadow-md'
-                : 'border-stone-200 bg-white'
+                ? 'border-slate-300 bg-zinc-900 shadow-lg shadow-black/20'
+                : 'border-zinc-800 bg-zinc-900/80'
             }`}
           >
             {plan.highlight && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-stone-800 px-3 py-0.5 text-xs font-medium text-white">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-slate-100 px-3 py-0.5 text-xs font-medium text-zinc-950">
                 Popular
               </span>
             )}
-            <h3 className="font-serif text-lg text-stone-800">{plan.name}</h3>
-            <p className="mt-1 flex-1 text-xs leading-relaxed text-stone-500">
+            <h3 className="font-serif text-lg text-slate-50">{plan.name}</h3>
+            <p className="mt-1 flex-1 text-xs leading-relaxed text-zinc-400">
               {plan.description}
             </p>
             <div className="mt-4 mb-4">
-              <span className="text-2xl font-semibold text-stone-800">
+              <span className="text-2xl font-semibold text-slate-50">
                 {formatPrice(plan.amount, plan.currency)}
               </span>
-              <span className="text-sm text-stone-500">
+              <span className="text-sm text-zinc-500">
                 {intervalLabel(plan.interval)}
               </span>
             </div>
@@ -154,8 +154,8 @@ export function PricingPlans({
               onClick={() => handleSelect(plan)}
               className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-60 ${
                 plan.highlight
-                  ? 'bg-stone-800 text-white hover:bg-stone-700'
-                  : 'border border-stone-300 bg-white text-stone-800 hover:bg-stone-50'
+                  ? 'bg-slate-100 text-zinc-950 hover:bg-white'
+                  : 'border border-zinc-700 bg-zinc-950 text-slate-50 hover:bg-zinc-800'
               }`}
             >
               {loadingPlan === plan.id
