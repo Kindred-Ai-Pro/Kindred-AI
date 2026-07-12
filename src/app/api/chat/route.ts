@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { google } from '@ai-sdk/google';
 import { auth } from '@clerk/nextjs/server';
 import { Index } from '@upstash/vector';

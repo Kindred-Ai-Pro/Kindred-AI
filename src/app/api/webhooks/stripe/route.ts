@@ -1,18 +1,23 @@
+export const dynamic = 'force-dynamic';
+
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 import { db } from '@/lib/db';
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-
 export async function POST(req: Request) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    return new NextResponse('Webhook secret not configured', { status: 500 });
+  }
+
   const body = await req.text();
   const signature = (await headers()).get('stripe-signature') as string;
 
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = getStripe().webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     return new NextResponse('Webhook Error', { status: 400 });
   }

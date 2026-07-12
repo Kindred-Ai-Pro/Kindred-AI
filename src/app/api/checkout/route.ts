@@ -8,7 +8,7 @@ import {
   isValidPlan,
   type PlanId,
 } from '@/lib/plans';
-import { getAppUrl, stripe } from '@/lib/stripe';
+import { getAppUrl, getStripe } from '@/lib/stripe';
 import { getOrCreateUser } from '@/lib/user';
 
 function resolveCheckoutPrice(body: { priceId?: string; plan?: string }) {
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     const appUrl = getAppUrl();
     const isLifetime = plan === 'lifetime';
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       mode: isLifetime ? 'payment' : 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/?upgraded=true&plan=${plan}`,

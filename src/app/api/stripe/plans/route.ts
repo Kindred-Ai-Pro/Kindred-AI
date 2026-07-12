@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import {
   PLAN_IDS,
@@ -5,7 +7,7 @@ import {
   getPriceIdForPlan,
   type PlanId,
 } from '@/lib/plans';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 
 export async function GET() {
   try {
@@ -26,7 +28,7 @@ export async function GET() {
           };
         }
 
-        const price = await stripe.prices.retrieve(priceId);
+        const price = await getStripe().prices.retrieve(priceId);
 
         return {
           id: planId,
