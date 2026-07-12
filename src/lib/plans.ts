@@ -1,10 +1,15 @@
 import 'server-only';
 
+import {
+  PLAN_IDS,
+  PLAN_LABELS,
+  createUnavailablePlans,
+  type PlanSummary,
+} from '@/lib/plan-catalog';
 import type { PlanId } from '@/lib/types/plans';
 
 export type { PlanId } from '@/lib/types/plans';
-
-export const PLAN_IDS: PlanId[] = ['weekly', 'monthly', 'lifetime'];
+export { PLAN_IDS, PLAN_LABELS, createUnavailablePlans, type PlanSummary };
 
 const PLAN_ENV_KEYS: Record<PlanId, string> = {
   weekly: 'STRIPE_WEEKLY_PRICE_ID',
@@ -12,33 +17,23 @@ const PLAN_ENV_KEYS: Record<PlanId, string> = {
   lifetime: 'STRIPE_LIFETIME_PRICE_ID',
 };
 
+const PLAN_ENV_FALLBACKS: Partial<Record<PlanId, string[]>> = {
+  monthly: ['STRIPE_PRICE_ID'],
+};
+
 export function getPriceIdForPlan(plan: PlanId): string | undefined {
-  const priceId = process.env[PLAN_ENV_KEYS[plan]];
-  if (!priceId || priceId === 'price_') {
-    return undefined;
+  const keys = [PLAN_ENV_KEYS[plan], ...(PLAN_ENV_FALLBACKS[plan] ?? [])];
+
+  for (const key of keys) {
+    const priceId = process.env[key];
+    if (priceId && priceId !== 'price_') {
+      return priceId;
+    }
   }
-  return priceId;
+
+  return undefined;
 }
 
 export function isValidPlan(plan: string): plan is PlanId {
   return PLAN_IDS.includes(plan as PlanId);
 }
-
-export const PLAN_LABELS: Record<
-  PlanId,
-  { name: string; description: string; highlight?: boolean }
-> = {
-  weekly: {
-    name: 'Weekly',
-    description: 'Flexible access, billed every week.',
-  },
-  monthly: {
-    name: 'Monthly',
-    description: 'Our most popular plan for regular reflection.',
-    highlight: true,
-  },
-  lifetime: {
-    name: 'Lifetime',
-    description: 'Pay once, journal forever.',
-  },
-};

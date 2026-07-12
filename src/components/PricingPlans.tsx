@@ -1,19 +1,23 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import {
+  PLAN_IDS,
+  createUnavailablePlans,
+  type PlanSummary,
+} from '@/lib/plan-catalog';
 import type { PlanId } from '@/lib/types/plans';
 
-type Plan = {
-  id: PlanId;
-  name: string;
-  description: string;
-  highlight?: boolean;
-  priceId: string | null;
-  amount: number | null;
-  currency: string | null;
-  interval: string | null;
-  available: boolean;
-};
+type Plan = PlanSummary;
+
+function mergePlans(loadedPlans: Plan[]): Plan[] {
+  const fallbacks = createUnavailablePlans();
+  const byId = new Map(loadedPlans.map((plan) => [plan.id, plan]));
+
+  return PLAN_IDS.map(
+    (planId) => byId.get(planId) ?? fallbacks.find((plan) => plan.id === planId)!,
+  );
+}
 
 function formatPrice(amount: number | null, currency: string | null) {
   if (amount == null || !currency) return '—';
@@ -48,6 +52,7 @@ export function PricingPlans({
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [plansError, setPlansError] = useState<string | null>(null);
   const [isAgreed, setIsAgreed] = useState(false);
   const [trialHint, setTrialHint] = useState(false);
   const trialCheckboxRef = useRef<HTMLInputElement>(null);
@@ -60,9 +65,33 @@ export function PricingPlans({
 
   useEffect(() => {
     fetch('/api/stripe/plans')
-      .then((res) => res.json())
-      .then((data) => setPlans(data.plans ?? []))
-      .catch(() => onCheckoutError?.('Unable to load pricing plans.'))
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+
+        if (!data || typeof data !== 'object') {
+          throw new Error('Unable to load pricing plans.');
+        }
+
+        const loadedPlans = Array.isArray(data.plans) ? data.plans : [];
+
+        if (!res.ok && loadedPlans.length === 0) {
+          throw new Error(data.error ?? 'Unable to load pricing plans.');
+        }
+
+        setPlans(mergePlans(loadedPlans));
+        if (data.error && typeof data.error === 'string') {
+          setPlansError(data.error);
+        }
+      })
+      .catch((error) => {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Unable to load pricing plans.';
+        setPlans(createUnavailablePlans());
+        setPlansError(message);
+        onCheckoutError?.(message);
+      })
       .finally(() => setIsLoading(false));
   }, [onCheckoutError]);
 
@@ -110,6 +139,9 @@ export function PricingPlans({
     );
   }
 
+  const displayPlans = plans.length > 0 ? plans : createUnavailablePlans();
+  const hasAvailablePlan = displayPlans.some((plan) => plan.available);
+
   return (
     <div className={compact ? '' : 'py-4'}>
       {!compact && (
@@ -118,6 +150,12 @@ export function PricingPlans({
           <p className="mt-2 text-sm text-zinc-400">
             Start with a 3-day trial on weekly or monthly. Lifetime is a one-time purchase.
           </p>
+        </div>
+      )}
+      {(plansError || !hasAvailablePlan) && (
+        <div className="mb-6 rounded-xl border border-amber-800/80 bg-amber-950/40 px-4 py-3 text-center text-sm text-amber-100">
+          {plansError ??
+            'Pricing is not configured yet. Add Stripe price IDs to your Vercel environment variables.'}
         </div>
       )}
       <label
@@ -151,7 +189,7 @@ export function PricingPlans({
             : 'grid-cols-1 md:grid-cols-3'
         }`}
       >
-        {plans.map((plan) => {
+        {displayPlans.map((plan) => {
           const needsAgreement = plan.id !== 'lifetime';
           const isDisabled =
             !plan.available ||
