@@ -224,6 +224,16 @@ export function JournalApp({
       unselected:
         'border-zinc-800 bg-zinc-900/40 text-zinc-300 hover:border-indigo-500/50',
     },
+    {
+      id: 'financial',
+      name: 'Financial Co-Pilot',
+      desc: 'Budgeting frameworks, literacy, and expense planning.',
+      selected:
+        'border-lime-400 bg-lime-500/15 text-white ring-2 ring-lime-400/20 shadow-[0_0_15px_rgba(132,204,22,0.15)] scale-105',
+      unselected:
+        'border-zinc-800 bg-zinc-900/40 text-zinc-300 hover:border-lime-500/50',
+      href: '/financial',
+    },
   ];
 
   const handleUpgrade = () => {
@@ -304,18 +314,33 @@ export function JournalApp({
             {personas.map((p) => (
               <button
                 key={p.id}
-                onClick={() => setActivePersona(p.id)}
+                type="button"
+                onClick={() => {
+                  if ('href' in p && p.href) {
+                    router.push(p.href);
+                    return;
+                  }
+                  setActivePersona(p.id);
+                }}
                 className={`p-4 rounded-2xl border-2 text-left transition-all duration-200 ${
-                  activePersona === p.id ? p.selected : p.unselected
+                  activePersona === p.id && !('href' in p) ? p.selected : p.unselected
                 }`}
               >
                 <h3
-                  className={`text-base font-semibold ${activePersona === p.id ? 'text-white' : 'text-zinc-300'}`}
+                  className={`text-base font-semibold ${
+                    activePersona === p.id && !('href' in p)
+                      ? 'text-white'
+                      : 'text-zinc-300'
+                  }`}
                 >
                   {p.name}
                 </h3>
                 <p
-                  className={`mt-1 text-xs leading-tight ${activePersona === p.id ? 'text-white/90' : 'text-zinc-500'}`}
+                  className={`mt-1 text-xs leading-tight ${
+                    activePersona === p.id && !('href' in p)
+                      ? 'text-white/90'
+                      : 'text-zinc-500'
+                  }`}
                 >
                   {p.desc}
                 </p>

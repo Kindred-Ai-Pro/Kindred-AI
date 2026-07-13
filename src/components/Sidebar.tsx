@@ -52,6 +52,14 @@ export function Sidebar({ onHistoryClick }: SidebarProps) {
       >
         {UI.SETTINGS}
       </button>
+
+      <button
+        type="button"
+        onClick={() => router.push('/financial')}
+        className={`${navButtonClass} border-lime-400/40 text-lime-100 hover:border-lime-400/50 hover:bg-lime-500/10`}
+      >
+        Financial Co-Pilot
+      </button>
     </nav>
   );
 }
