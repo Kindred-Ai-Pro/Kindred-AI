@@ -116,6 +116,14 @@ export function JournalApp({
       setSystemNotice(
         'The Google API key may be invalid or restricted. In Google AI Studio, make sure the key allows server use (no website restrictions).',
       );
+    } else if (
+      message === 'An error occurred.' ||
+      message === 'An error occurred' ||
+      message === 'Failed to fetch'
+    ) {
+      setSystemNotice(
+        'Your guide hit a connection snag. Wait a few seconds and try again. If it keeps happening, confirm GOOGLE_GENERATIVE_AI_API_KEY is set in Vercel and redeploy.',
+      );
     } else if (message.length > 0 && message !== UI.CHAT_UNAVAILABLE) {
       setSystemNotice(message.slice(0, 220));
     } else {
