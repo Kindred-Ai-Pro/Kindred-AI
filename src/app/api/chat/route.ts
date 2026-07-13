@@ -175,39 +175,58 @@ export async function POST(req: Request) {
     const isFinancial = personaId === 'financial';
 
     if (isFinancial) {
-      let financialChatId =
-        typeof sessionChatId === 'string' ? sessionChatId : undefined;
-      let chat = financialChatId
-        ? await getFinancialChatForUser(financialChatId, userId)
-        : null;
+      try {
+        let financialChatId =
+          typeof sessionChatId === 'string' ? sessionChatId : undefined;
+        let chat = financialChatId
+          ? await getFinancialChatForUser(financialChatId, userId)
+          : null;
 
-      if (!chat) {
-        chat = await createFinancialChat(userId);
-        financialChatId = chat.id;
+        if (!chat) {
+          chat = await createFinancialChat(userId);
+          financialChatId = chat.id;
+        }
+
+        if (userInput.trim()) {
+          await saveMessage(chat.id, MessageRole.user, userInput);
+          await ensureChatTitleFromFirstMessage(chat.id, userInput);
+        }
+
+        const history = await getMessagesForChat(chat.id, userId);
+        const modelMessages = toModelMessages(history);
+
+        const result = streamText({
+          model: google('gemini-2.5-flash'),
+          system: FINANCIAL_COPILOT_SYSTEM_PROMPT,
+          messages: modelMessages,
+          onFinish: async ({ text }) => {
+            if (text.trim()) {
+              await saveMessage(chat.id, MessageRole.assistant, text);
+            }
+          },
+        });
+
+        return result.toUIMessageStreamResponse({
+          headers: { 'X-Financial-Chat-Id': chat.id },
+        });
+      } catch (financialError) {
+        console.error('--- FINANCIAL CHAT ERROR ---', financialError);
+        const message =
+          financialError instanceof Error
+            ? financialError.message
+            : String(financialError);
+        const needsMigration =
+          message.includes('does not exist') || message.includes('P2021');
+
+        return NextResponse.json(
+          {
+            error: needsMigration
+              ? 'Financial chat tables are not set up yet. Run npx prisma migrate deploy on your production database.'
+              : 'Financial Co-Pilot is temporarily unavailable.',
+          },
+          { status: needsMigration ? 503 : 500 },
+        );
       }
-
-      if (userInput.trim()) {
-        await saveMessage(chat.id, MessageRole.user, userInput);
-        await ensureChatTitleFromFirstMessage(chat.id, userInput);
-      }
-
-      const history = await getMessagesForChat(chat.id, userId);
-      const modelMessages = toModelMessages(history);
-
-      const result = streamText({
-        model: google('gemini-2.5-flash'),
-        system: FINANCIAL_COPILOT_SYSTEM_PROMPT,
-        messages: modelMessages,
-        onFinish: async ({ text }) => {
-          if (text.trim()) {
-            await saveMessage(chat.id, MessageRole.assistant, text);
-          }
-        },
-      });
-
-      return result.toUIMessageStreamResponse({
-        headers: { 'X-Financial-Chat-Id': chat.id },
-      });
     }
 
     const selectedPrompt =
