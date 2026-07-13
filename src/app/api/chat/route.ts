@@ -12,6 +12,7 @@ import {
 } from '@/lib/user';
 import { sentimentToMood } from '@/lib/mood';
 import { UI } from '@/lib/labels';
+import { createGoogleProvider, getGoogleApiKey } from '@/lib/google-ai';
 
 const RATE_LIMIT = 10;
 const WINDOW_MS = 60 * 60 * 1000;
@@ -134,12 +135,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    const [{ google }, { convertToModelMessages, streamText }, { default: Sentiment }] =
-      await Promise.all([
-        import('@ai-sdk/google'),
-        import('ai'),
-        import('sentiment'),
-      ]);
+    const [{ convertToModelMessages, streamText }, { default: Sentiment }] =
+      await Promise.all([import('ai'), import('sentiment')]);
+
+    const googleProvider = createGoogleProvider();
 
     const sentiment = new Sentiment();
     const index = await getVectorIndex();
@@ -153,9 +152,9 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    if (!googleProvider || !getGoogleApiKey()) {
       return NextResponse.json(
-        { error: UI.CHAT_UNAVAILABLE },
+        { error: UI.CHAT_UNAVAILABLE, details: 'Google API key is not configured.' },
         { status: 503 },
       );
     }
@@ -230,22 +229,23 @@ Context: Sentiment score is ${analysis.score} (${sentimentLabel}). ${context}
 Action: If context exists, gently reference the past entry — for example, "I remember you mentioned..." If sentiment is low, offer a 'Reflective Journey' prompt.`;
 
     const result = await streamText({
-      model: google('gemini-2.0-flash'),
+      model: googleProvider('gemini-1.5-flash'),
       system: systemPrompt,
       messages: await convertToModelMessages(messages),
+      onFinish: async () => {
+        try {
+          await db.user.update({
+            where: { id: user.id },
+            data: {
+              chatCount: isNewDay ? 1 : chatCount + 1,
+              lastChatDate: new Date(),
+            },
+          });
+        } catch (error) {
+          console.error('--- CHAT COUNT UPDATE ERROR ---', error);
+        }
+      },
     });
-
-    try {
-      await db.user.update({
-        where: { id: user.id },
-        data: {
-          chatCount: isNewDay ? 1 : chatCount + 1,
-          lastChatDate: new Date(),
-        },
-      });
-    } catch (error) {
-      console.error('--- CHAT COUNT UPDATE ERROR ---', error);
-    }
 
     return result.toUIMessageStreamResponse();
   } catch (error) {

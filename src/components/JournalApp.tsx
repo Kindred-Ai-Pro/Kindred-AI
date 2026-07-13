@@ -100,16 +100,24 @@ export function JournalApp({
   }, [searchParams]);
 
   const handleChatError = useCallback((error: Error) => {
-    if (error.message === RATE_LIMIT_MESSAGE) {
+    const message = error.message ?? '';
+
+    if (message === RATE_LIMIT_MESSAGE) {
       setSystemNotice(RATE_LIMIT_MESSAGE);
-    } else if (error.message === LIMIT_REACHED_MESSAGE) {
+    } else if (message === LIMIT_REACHED_MESSAGE) {
       setSystemNotice(LIMIT_REACHED_MESSAGE);
       setShowPricing(true);
     } else if (
-      error.message === UI.AUTH_REQUIRED_TO_START ||
-      error.message === 'Unauthorized'
+      message === UI.AUTH_REQUIRED_TO_START ||
+      message === 'Unauthorized'
     ) {
       setSystemNotice(UI.AUTH_REQUIRED_TO_START);
+    } else if (/api key|API key|GOOGLE_GENERATIVE/i.test(message)) {
+      setSystemNotice(
+        'The Google API key may be invalid or restricted. In Google AI Studio, make sure the key allows server use (no website restrictions).',
+      );
+    } else if (message.length > 0 && message !== UI.CHAT_UNAVAILABLE) {
+      setSystemNotice(message.slice(0, 220));
     } else {
       setSystemNotice(UI.CHAT_UNAVAILABLE);
     }
@@ -131,6 +139,7 @@ export function JournalApp({
       transportReadyRef.current = true;
       setChatTransport(
         new DefaultChatTransport({
+          api: '/api/chat',
           fetch: async (input, init) => {
             const initBody =
               typeof init?.body === 'string' && init.body
@@ -138,6 +147,7 @@ export function JournalApp({
                 : {};
             const res = await fetch(input, {
               ...init,
+              credentials: 'include',
               body: JSON.stringify({
                 ...initBody,
                 personaId: activePersonaRef.current,
