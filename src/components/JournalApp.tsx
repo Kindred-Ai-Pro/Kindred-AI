@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { SignInButton, SignUpButton } from '@clerk/nextjs';
 import { useChat } from '@ai-sdk/react';
 import type { ChatTransport, UIMessage } from 'ai';
 import { PricingPlans } from '@/components/PricingPlans';
@@ -123,6 +124,15 @@ export function JournalApp({
               return res;
             }
 
+            if (res.status === 401) {
+              const data = (await res
+                .clone()
+                .json()
+                .catch(() => ({}))) as { error?: string };
+              setSystemNotice(data.error ?? UI.AUTH_REQUIRED_TO_START);
+              return res;
+            }
+
             if (res.ok) {
               loadMoodData();
             }
@@ -148,6 +158,11 @@ export function JournalApp({
       } else if (error.message === LIMIT_REACHED_MESSAGE) {
         setSystemNotice(LIMIT_REACHED_MESSAGE);
         setShowPricing(true);
+      } else if (
+        error.message === UI.AUTH_REQUIRED_TO_START ||
+        error.message === 'Unauthorized'
+      ) {
+        setSystemNotice(UI.AUTH_REQUIRED_TO_START);
       }
     },
   });
@@ -273,8 +288,11 @@ export function JournalApp({
       const response = await saveReflection(title, text, currentChatId);
 
       if (!response.success) {
-        if (response.error === 'User not authenticated') {
-          router.push('/sign-in');
+        if (
+          response.error === UI.AUTH_REQUIRED_TO_START ||
+          response.error === 'User not authenticated'
+        ) {
+          setSystemNotice(UI.AUTH_REQUIRED_TO_START);
           return;
         }
 
@@ -437,6 +455,26 @@ export function JournalApp({
                     <p className="mt-2 font-serif text-sm leading-relaxed text-amber-100">
                       {systemNotice}
                     </p>
+                    {systemNotice === UI.AUTH_REQUIRED_TO_START && (
+                      <div className="mt-4 flex flex-wrap justify-center gap-3">
+                        <SignUpButton mode="modal">
+                          <button
+                            type="button"
+                            className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-zinc-950 transition-colors hover:bg-white"
+                          >
+                            Create free account
+                          </button>
+                        </SignUpButton>
+                        <SignInButton mode="modal">
+                          <button
+                            type="button"
+                            className="rounded-lg border border-amber-700/80 bg-transparent px-4 py-2 text-sm font-medium text-amber-100 transition-colors hover:bg-amber-900/40"
+                          >
+                            Sign in
+                          </button>
+                        </SignInButton>
+                      </div>
+                    )}
                     {systemNotice === LIMIT_REACHED_MESSAGE && !showPricing && (
                       <button
                         type="button"

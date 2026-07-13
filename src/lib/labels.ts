@@ -7,4 +7,6 @@ export const UI = {
   SETTINGS: 'Configure your sanctuary',
   AUTH_REQUIRED_FOR_CHECKOUT:
     'Please create an account or sign in to subscribe.',
+  AUTH_REQUIRED_TO_START:
+    'Create a free account or sign in to capture this moment and chat with your guide.',
 };

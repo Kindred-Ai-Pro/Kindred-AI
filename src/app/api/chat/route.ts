@@ -11,6 +11,7 @@ import {
   getOrCreateUser,
 } from '@/lib/user';
 import { sentimentToMood } from '@/lib/mood';
+import { UI } from '@/lib/labels';
 
 const RATE_LIMIT = 10;
 const WINDOW_MS = 60 * 60 * 1000;
@@ -143,7 +144,10 @@ export async function POST(req: Request) {
     const { userId } = await auth();
 
     if (!userId) {
-      return new Response('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: UI.AUTH_REQUIRED_TO_START },
+        { status: 401 },
+      );
     }
 
     const user = await getOrCreateUser(userId);

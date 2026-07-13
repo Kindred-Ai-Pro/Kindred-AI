@@ -16,7 +16,7 @@ export async function saveReflection(
   const { userId } = await auth();
 
   if (!userId) {
-    return { success: false, error: 'User not authenticated' };
+    return { success: false, error: UI.AUTH_REQUIRED_TO_START };
   }
 
   const trimmedContent = content.trim();
@@ -118,7 +118,7 @@ export async function createNewChat(): Promise<SaveReflectionResult> {
   const { userId } = await auth();
 
   if (!userId) {
-    return { success: false, error: 'User not authenticated' };
+    return { success: false, error: UI.AUTH_REQUIRED_TO_START };
   }
 
   const supabase = createClient();

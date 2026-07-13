@@ -22,8 +22,11 @@ export function Sidebar() {
     }
 
     console.error('Failed to save:', response?.error);
-    if (response?.error === 'User not authenticated') {
-      router.push('/sign-in');
+    if (
+      response?.error === UI.AUTH_REQUIRED_TO_START ||
+      response?.error === 'User not authenticated'
+    ) {
+      return;
     }
   };
 
