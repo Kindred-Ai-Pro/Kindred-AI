@@ -12,7 +12,7 @@ import {
 } from '@/lib/user';
 import { sentimentToMood } from '@/lib/mood';
 import { UI } from '@/lib/labels';
-import { createGoogleProvider, getGoogleApiKey, GOOGLE_CHAT_MODELS } from '@/lib/google-ai';
+import { createGoogleProvider, getGoogleApiKey, getGoogleChatModelIds } from '@/lib/google-ai';
 
 const RATE_LIMIT = 10;
 const WINDOW_MS = 60 * 60 * 1000;
@@ -135,7 +135,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const [{ convertToModelMessages, streamText }, { default: Sentiment }] =
+    const [{ convertToModelMessages, streamText, generateText }, { default: Sentiment }] =
       await Promise.all([import('ai'), import('sentiment')]);
 
     const googleProvider = createGoogleProvider();
@@ -229,37 +229,58 @@ Context: Sentiment score is ${analysis.score} (${sentimentLabel}). ${context}
 Action: If context exists, gently reference the past entry — for example, "I remember you mentioned..." If sentiment is low, offer a 'Reflective Journey' prompt.`;
 
     const modelMessages = await convertToModelMessages(messages);
+    let selectedModel: string | null = null;
     let lastModelError: unknown;
 
-    for (const modelId of GOOGLE_CHAT_MODELS) {
+    for (const modelId of getGoogleChatModelIds()) {
       try {
-        const result = await streamText({
+        await generateText({
           model: googleProvider(modelId),
           system: systemPrompt,
           messages: modelMessages,
-          onFinish: async () => {
-            try {
-              await db.user.update({
-                where: { id: user.id },
-                data: {
-                  chatCount: isNewDay ? 1 : chatCount + 1,
-                  lastChatDate: new Date(),
-                },
-              });
-            } catch (error) {
-              console.error('--- CHAT COUNT UPDATE ERROR ---', error);
-            }
-          },
+          maxOutputTokens: 1,
         });
-
-        return result.toUIMessageStreamResponse();
+        selectedModel = modelId;
+        break;
       } catch (error) {
         lastModelError = error;
         console.error(`--- MODEL ${modelId} FAILED ---`, error);
       }
     }
 
-    throw lastModelError ?? new Error('All Gemini models failed');
+    if (!selectedModel) {
+      throw lastModelError ?? new Error('No Gemini models available');
+    }
+
+    const result = streamText({
+      model: googleProvider(selectedModel),
+      system: systemPrompt,
+      messages: modelMessages,
+      onFinish: async () => {
+        try {
+          await db.user.update({
+            where: { id: user.id },
+            data: {
+              chatCount: isNewDay ? 1 : chatCount + 1,
+              lastChatDate: new Date(),
+            },
+          });
+        } catch (error) {
+          console.error('--- CHAT COUNT UPDATE ERROR ---', error);
+        }
+      },
+    });
+
+    return result.toUIMessageStreamResponse({
+      onError: (error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('--- CHAT STREAM ERROR ---', error);
+        if (/not found|APICallError|API key|permission/i.test(message)) {
+          return `AI model error: ${message.slice(0, 200)}`;
+        }
+        return UI.CHAT_UNAVAILABLE;
+      },
+    });
   } catch (error) {
     console.error('--- DETAILED API ERROR ---', error);
     const details = error instanceof Error ? error.message : String(error);
