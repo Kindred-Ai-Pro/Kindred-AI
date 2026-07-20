@@ -1,6 +1,7 @@
 'use server';
 
 import { auth } from '@clerk/nextjs/server';
+import { ensureChatForUser } from '@/lib/chat-messages';
 import { tryCreateServerSupabaseClient } from '@/lib/supabase/server';
 import { UI } from '@/lib/labels';
 
@@ -108,6 +109,26 @@ export async function saveReflection(
   const savedChat = data[0] as { id: string };
 
   return { success: true, id: savedChat.id };
+}
+
+export async function createChatDraft(chatId: string): Promise<SaveReflectionResult> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: UI.AUTH_REQUIRED_TO_START };
+  }
+
+  const saved = await ensureChatForUser({
+    chatId,
+    userId,
+    title: UI.NEW_ENTRY,
+  });
+
+  if (!saved) {
+    return { success: false, error: UI.HISTORY_SAVE_UNAVAILABLE };
+  }
+
+  return { success: true, id: chatId };
 }
 
 export async function createNewChat(): Promise<SaveReflectionResult> {

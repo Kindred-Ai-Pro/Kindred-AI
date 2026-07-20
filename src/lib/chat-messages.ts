@@ -2,7 +2,7 @@ import 'server-only';
 
 import type { UIMessage } from 'ai';
 import { UI } from '@/lib/labels';
-import { generateId } from '@/lib/generate-id';
+import { generateId, isValidUuid } from '@/lib/generate-id';
 import { tryCreateServerSupabaseClient } from '@/lib/supabase/server';
 
 type MessageRow = {
@@ -125,7 +125,8 @@ export async function saveChatMessage(params: {
     return null;
   }
 
-  const messageId = params.id ?? generateId();
+  const messageId =
+    params.id && isValidUuid(params.id) ? params.id : generateId();
 
   const { error } = await supabase.from('messages').upsert(
     {
@@ -202,7 +203,7 @@ export function getLatestPersistableUserMessage(messages: UIMessage[]): {
     if (!text.trim()) continue;
 
     return {
-      id: message.id || generateId(),
+      id: isValidUuid(message.id) ? message.id : generateId(),
       text: text.trim(),
     };
   }

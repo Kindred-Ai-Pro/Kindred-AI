@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SignInButton, SignUpButton } from '@clerk/nextjs';
 import type { ChatTransport, UIMessage } from 'ai';
+import { createChatDraft } from '@/app/actions/chat';
 import { PricingPlans } from '@/components/PricingPlans';
 import { ChatBox } from '@/components/ChatBox';
 import { ChatLayout } from '@/components/ChatLayout';
@@ -35,7 +36,7 @@ export function JournalApp({
   chatTitle,
   initialMessages = [],
   initialMoodData = [],
-  historyItems = [],
+  historyItems: initialHistoryItems = [],
 }: JournalAppProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -55,6 +56,12 @@ export function JournalApp({
   const activePersonaRef = useRef(activePersona);
   const isPrivateRef = useRef(isPrivate);
   const [moodData, setMoodData] = useState<MoodDataPoint[]>(initialMoodData);
+  const [historyItems, setHistoryItems] =
+    useState<ChatHistoryItem[]>(initialHistoryItems);
+
+  useEffect(() => {
+    setHistoryItems(initialHistoryItems);
+  }, [initialHistoryItems]);
 
   useEffect(() => {
     chatIdRef.current = chatId;
@@ -79,6 +86,22 @@ export function JournalApp({
       // Mood graph is non-critical; ignore fetch errors.
     }
   };
+
+  const loadHistory = useCallback(async () => {
+    try {
+      const res = await fetch('/api/chats', { credentials: 'include' });
+      const json = await res.json();
+      if (res.ok) {
+        setHistoryItems(json.data ?? []);
+      }
+    } catch {
+      // History refresh is best-effort.
+    }
+  }, []);
+
+  const refreshDrawerData = useCallback(async () => {
+    await Promise.all([loadMoodData(), loadHistory()]);
+  }, [loadHistory]);
 
   useEffect(() => {
     setMoodData(initialMoodData);
@@ -326,8 +349,14 @@ export function JournalApp({
     setSystemNotice(null);
     setChatSessionKey((key) => key + 1);
 
+    void createChatDraft(nextChatId).then((response) => {
+      if (response.success) {
+        void loadHistory();
+      }
+    });
+
     router.push('/');
-  }, [router]);
+  }, [router, loadHistory]);
 
   const handleSave = async () => {
     const text = input.trim();
@@ -349,6 +378,8 @@ export function JournalApp({
       if (!chatIdProp && typeof window !== 'undefined') {
         window.history.replaceState(null, '', `/chat/${chatIdRef.current}`);
       }
+
+      await loadHistory();
     } catch (error) {
       console.error('Submit failed:', error);
       setSystemNotice(UI.CHAT_UNAVAILABLE);
@@ -366,7 +397,7 @@ export function JournalApp({
     <ChatLayout
       moodData={moodData}
       historyItems={historyItems}
-      onDrawerOpen={loadMoodData}
+      onDrawerOpen={refreshDrawerData}
       onSelectHistory={handleSelectHistory}
       onNewChat={handleNewChat}
       footer={
