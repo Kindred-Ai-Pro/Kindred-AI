@@ -12,6 +12,11 @@ export async function GET() {
     : { chats: false, messages: false, error: 'Supabase env vars missing.' };
 
   const serviceRoleKeyFormat = getSupabaseServiceRoleKeyFormat();
+  const clerkPublishableKey = Boolean(
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+  );
+  const clerkSecretKey = Boolean(process.env.CLERK_SECRET_KEY);
+  const clerkSignInUrl = Boolean(process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL);
 
   return NextResponse.json({
     googleKey: Boolean(getGoogleApiKey()),
@@ -31,5 +36,17 @@ export async function GET() {
           : !supabaseEnv.serviceRoleKey
             ? 'SUPABASE_SERVICE_ROLE_KEY is missing. Chat history writes require the service role key on the server.'
             : null,
+    clerk: {
+      publishableKey: clerkPublishableKey,
+      secretKey: clerkSecretKey,
+      signInUrl: clerkSignInUrl,
+      ready: clerkPublishableKey && clerkSecretKey,
+    },
+    clerkMisconfigured:
+      !clerkPublishableKey || !clerkSecretKey
+        ? 'Set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY in Vercel for Production, then redeploy.'
+        : !clerkSignInUrl
+          ? 'Set NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in in Vercel to avoid proxy auth errors.'
+          : null,
   });
 }

@@ -6,7 +6,13 @@ import { getMoodDataForCurrentUser } from '@/lib/mood';
 import type { ChatHistoryItem } from '@/lib/types/chats';
 
 export default async function Page() {
-  const { userId } = await auth();
+  let userId: string | null = null;
+
+  try {
+    ({ userId } = await auth());
+  } catch (error) {
+    console.error('--- HOME PAGE AUTH ERROR ---', error);
+  }
 
   let initialMoodData: Awaited<ReturnType<typeof getMoodDataForCurrentUser>> = [];
   let historyItems: ChatHistoryItem[] = [];
