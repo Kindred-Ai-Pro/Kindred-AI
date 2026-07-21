@@ -125,6 +125,38 @@ export function JournalApp({
   }, [chatIdProp]);
 
   useEffect(() => {
+    if (!chatIdProp) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadSavedMessages() {
+      try {
+        const res = await fetch(`/api/chats/${chatIdProp}/messages`, {
+          credentials: 'include',
+        });
+        const json = (await res.json()) as { messages?: UIMessage[] };
+        if (cancelled || !res.ok || !json.messages?.length) {
+          return;
+        }
+
+        chatApiRef.current?.setMessages(json.messages);
+      } catch {
+        // Best-effort reload for saved reflections.
+      }
+    }
+
+    if (initialMessages.length === 0) {
+      void loadSavedMessages();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chatIdProp, initialMessages]);
+
+  useEffect(() => {
     if (searchParams.get('upgraded') === 'true') {
       setShowUpgradeSuccess(true);
       setSystemNotice(null);
@@ -351,6 +383,7 @@ export function JournalApp({
 
   const handleSelectHistory = (id: string) => {
     router.push(`/chat/${id}`);
+    router.refresh();
   };
 
   const handleNewChat = useCallback(async () => {
@@ -395,8 +428,8 @@ export function JournalApp({
       setInput('');
       await sendMessage({ text });
 
-      if (!chatIdProp && typeof window !== 'undefined') {
-        window.history.replaceState(null, '', `/chat/${chatIdRef.current}`);
+      if (!chatIdProp) {
+        router.replace(`/chat/${chatIdRef.current}`);
       }
 
       await loadHistory();
