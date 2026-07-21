@@ -178,7 +178,7 @@ export async function syncChatPreview(
 
   const { error: updateError } = await supabase
     .from('chats')
-    .update({ title, content, updated_at: new Date().toISOString() })
+    .update({ title, content })
     .eq('id', chatId)
     .eq('user_id', clerkUserId);
 
